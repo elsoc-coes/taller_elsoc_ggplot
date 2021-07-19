@@ -152,7 +152,7 @@ elsoc_long$conf_carb <- sjlabelled::set_label(elsoc_long$conf_carb, label =
 
 #Visualizar la bbdd procesada con las variables incorporadas
 knitr::kable(elsoc_long, "pipe")
-```
+
 
 ###### g. Guardar base de datos formato R.Data (opcional) ###### 
 
