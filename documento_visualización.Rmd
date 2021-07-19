@@ -1,0 +1,1045 @@
+---
+title: "Documento de Visualización de Datos ELSOC Longitudinales con ggplot2"
+author: "Equipo Ejecutivo ELSOC 2021"
+date: "02-06-2021"
+output:
+  html_document:
+    toc: yes
+    theme: paper
+    highlight: pygments
+    toc_float:
+      collapsed: yes
+    code_folding: show
+  pdf_document:
+    toc: yes
+abstract: |
+  <br><br><br>
+  El presente documento tiene como objetivo explicar los pasos para lograr la visualización de los datos óptima a través del paquete `ggplot2` . En este sentido, el documento se divide en dos partes. La primera corresponde a la preparación de la base de datos, en donde se realizarán modificaciones a la base de datos para su posterior uso en los gráficos. La segunda parte se encarga de la visualización de datos con `ggplot2`, en donde se expondrán tres tipos de gráficos: de barra, alluvial y de líneas.
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(cache=FALSE, 
+                      warning = FALSE, 
+                      message = FALSE) 
+
+Sys.setlocale("LC_ALL","ES_ES.UTF-8")
+```
+
+---
+
+## 1. Preparación de datos
+
+En lo que sigue se especifican los pasos a seguir para obtener una base de datos procesada, con la cual es posible realizar una correcta visualización y análisis de los datos. En primer lugar se cargan las librerías que contienen funciones necesarias para la manipulación de los datos. A continuación se carga la base de datos directamente del repositorio Dataverse de ELSOC-COES. En tercer lugar, se seleccionar las variables a utilizar, filtrando casos con atrición y aquellos con inconsistencias mayores entre olas. Luego, se transforma la base de datos cargada de formato "wide" a "long", a fin de facilitar posteriores análisis. Finalmente, se recodifican y renombran las variables a usar, todo ello con el fin de facilitar la visualización de datos. 
+
+### a. Cargar librerías
+
+```{r Cargar librerías, echo=TRUE}
+#"pacman" es una herramienta de administración de paquetes R. Se utiliza el comando "p_load"
+#para instalar los paquetes que no se encuentran descargados y cargar los paquetes que se
+#deseen utilizar, ahorrando lineas de escritura.
+
+#install.packages("pacman")
+library(pacman)
+pacman::p_load(car,dplyr,panelr,stringr,tidyverse,ggplot2,survey,ggrepel,na.tools)
+remove(list = ls()) #limpieza del entorno de trabajo
+options(scipen=999) #evita notación científica
+```
+
+### b. Cargar base de datos desde repositorio en Dataverse 
+1. Si quiere manualmente descargar en la base de datos desde la url oficial alojado en Dataverse puede ingresar al siguiente [link](https://dataverse.harvard.edu/dataverse/coes_data_repository)
+```{r Cargar bbdd desde archivo}
+# Para cargar la bbdd desde un archivo que fue manualmente descargado:
+#getwd()
+#load("C:/Users/.../ELSOC_Wide_2016_2019_Merge_v1.00_R.RData")
+```
+
+
+2. Si quiere automaticamente utilizar la base de datos desde el url en forma directa siga el código siguiente.
+```{r Cargar bbdd desde url}
+load(url("https://dataverse.harvard.edu/api/access/datafile/4606527")) #cargar bbdd desde url oficial alojado en dataverse
+```
+
+### c. Selección de variables y filtrado de datos
+
+Para el desarrollo del instructivo se trabajará con las siguientes variables de ELSOC:
+
+- `id`: número único que identifica a cada persona encuestada
+- `ponderador01`: ponderador ajustado por región
+- `ponderador02`: ponderador ajustado por región y sexo
+- `m0_sexo`: sexo de la persona encuestada
+- `m0_edad`: edad de la persona encuestada
+- `m01`: nivel de educación de la persona encuestada
+- `d01`: estatus social subjetivo de la persona encuestada
+- `m02`: situación ocupacional de la persona encuestada
+- `segmento`: manzanas o bloques de la muestra.
+- `estrato`: tipo de ciudad de la persona encuestada
+- `region`: región de residencia de la persona encuestada
+- `c16`: identificación con partidos políticos de la persona encuestada
+- `c17`: identificación con coalición política de la persona encuestada
+- `c28`: grado de acuerdo con la necesidad de cambiar la constitución actual de la persona encuestada
+- `c05`: nivel de confianza con el presidente de la república de la persona encuestada
+- `c05_02`: nivel de confianza con los partidos políticos de la persona encuestada
+- `c05_03`: nivel de confianza con los carabineros de la persona encuestada
+
+Todas las cuales tienen agregado el sufijo "_w0[X]" que indica la ola de medición de la variable, y donde **[X]** corresponde al número de ola, pudiendo tomar los valores **1**, **2**, **3** y **4**, asociados a las olas 2016, 2017, 2018 y 2019 respectivamente. 
+
+Finalmente, para trabajar con datos panel resulta fundamental filtrar las variables por atrición y tipo de casos, donde:
+
+- `tipo_atricion`: indica cantidad de encuestados que responde a cada ola incluidas en la versión de la base de datos combinada.
+- `tipo_caso`: clasifica los casos según su consistencia intertemporal en los atributos sexo, edad y educación.
+
+En específico, nos quedaremos sólo con aquellos encuestados que respondieron en las cuatro olas de ELSOC (`tipo_atricion`=1) y eliminaremos de la muestra los casos con inconsistencias mayores (`tipo_caso`=2).
+ 
+```{r Seleccion de variables}
+sjmisc::frq(elsoc_wide_2016_2019$tipo_caso)
+elsoc_wide <- elsoc_wide_2016_2019 %>% dplyr::filter(tipo_atricion==1 & tipo_caso !=2 & tipo_caso !=1) 
+              #filtrar atrición entre 2016-19 y casos c/inconsistencias mayores
+
+elsoc_wide <- elsoc_wide %>% dplyr::select(idencuesta, #identificador individual
+                             ponderador01_w01,ponderador01_w02,ponderador01_w03,ponderador01_w04, 
+                                                                            #ponderador población
+                             ponderador02_w01,ponderador02_w02,ponderador02_w03,ponderador02_w04, 
+                                                                                #ponderador sexo
+                             m0_sexo_w01,m0_sexo_w02,m0_sexo_w03,m0_sexo_w04, #sexo
+                             m0_edad_w01,m0_edad_w02,m0_edad_w03,m0_edad_w04, #edad
+                             m01_w01,m01_w02,m01_w03,m01_w04, #nivel de educación
+                             d01_01_w01,d01_01_w02,d01_01_w03,d01_01_w04, #estatus social subjetivo
+                             m02_w01,m02_w02,m02_w03,m02_w04, #situación ocupacional
+                             segmento_w01,segmento_w02,segmento_w03,segmento_w04, #manzana o bloque
+                             estrato_w01,estrato_w02,estrato_w03,estrato_w04, #ciudad
+                             region_w01,region_w02,region_w03,region_w04, #región
+                             c16_w01,c16_w02,c16_w03,c16_w04, #indentificación con partido político
+                             c17_w01,c17_w02,c17_w03,c17_w04, #intentificación con coalición política
+                             c28_w01,c28_w02,c28_w03,c28_w04, #de acuerdo con cambiar la constitución actual
+                             c05_08_w01,c05_08_w02,c05_08_w03,c05_08_w04, #confianza en el presidente
+                             c05_02_w01,c05_02_w02,c05_02_w03,c05_02_w04, #confianza en partidos políticos
+                             c05_03_w01,c05_03_w02,c05_03_w03,c05_03_w04) #confianza en carabineros
+                             
+```
+
+### d. Transformar base de datos de wide a long
+
+Antes de trasformar la base de datos de wide a long, se debe tener claro el nombre de la etiqueta de periodo asociada a cada variable. En este caso, como se indicó, dicha etiqueta es el sufijo "_w0", habiendo cuatro casos asociados a cada ola: "_w01", "_w02", "_w03" y "_w04". Estos corresponden al años 2016, 2017, 2018 y 2019, respectivamente. Teniendo esta información clara se puede completar los argumentos de la función `long_panel` del paquete `panelr`. Para mayor información del uso de `long_panel` visitar el [link](https://rdrr.io/cran/panelr/man/long_panel.html).
+
+<div class="alert alert-success" role="alert">
+  <h4 class="alert-heading">Estructura de la función long panel</h4>
+  <p>[nueva bbdd long]  <- long_panel(data = [bbdd wide], 
+                                  prefix = "[prefijo de la etiqueta]", 
+                                  begin = [etiqueta de la primera ola], 
+                                  end = [etiqueta de la última ola], 
+                                  label_location = "[ubicación de la ola en la etiqueta]", 
+                                  id = "[indentificador individual]", 
+                                  wave ="[nombre de la nueva variable asociada al periodo]").</p>
+</div>
+
+```{r Transformar bbdd de wide a long}
+
+elsoc_long <- long_panel(data = elsoc_wide, #base de datos formato wide
+                         prefix = "_w0", #caracteres antes de la etiqueta de cada ola
+                         begin = 1, #etiqueta de la primera ola
+                         end = 4, #etiqueta de la última ola
+                         label_location = "end", #indica donde se localiza la etiqueta asociada a la ola 
+                         id = "idencuesta", #indica identificador individual
+                         wave = "ola") #nombre que tomará la variable que indica periodo. 
+```
+
+Finalmente, filtramos la base de datos long de casos perdidos.
+
+```{r Recode de casos perdidos en NA}
+
+elsoc_long[elsoc_long==-999 | elsoc_long==-888] <- NA #recodificar No sabe y No responde en NA
+sum(is.na(elsoc_long)) #indica cantidad de NA
+```
+
+### e. Recodificación de variables
+
+A continuación, se recodificarán las categorías de respuesta y se etiquetarán las variables seleccionadas.
+
+
+
+```{r Recode de var "ola"}
+#Recode variable "ola" correspondiente a la ola de medición.
+elsoc_long$ola <- factor(elsoc_long$ola,labels = c('2016', '2017', '2018', '2019'))
+elsoc_long$ola <- sjlabelled::set_label(elsoc_long$ola, label = c("Ola de Medición"))
+                  #etiquetamos variable
+
+#Recode variable "m0_sexo" / rename "sexo".
+elsoc_long$sexo <- factor(elsoc_long$m0_sexo,labels = c('Hombre', 'Mujer'))
+elsoc_long$sexo <- sjlabelled::set_label(elsoc_long$sexo, label = c("Tipo de sexo")) 
+                   #etiquetamos variable
+
+#Recode variable "m0_edad" / rename "edad"
+elsoc_long$edad <- factor(car::recode(elsoc_long$m0_edad, "18:29=1;30:49=2;50:64=3;65:150=4"),
+                           labels = c('18-29', '30-49', '50-64', '65 o más'))
+elsoc_long$edad <- sjlabelled::set_label(elsoc_long$edad, label = c("Edad en Tramos")) 
+                  #etiquetamos variable
+
+#Recode variable "m01" nivel educacional / rename "educacion"
+elsoc_long$educacion <- car::recode(elsoc_long$m01,"c(1,2,3)=1;c(4,5)=2;c(6,7)=3;c(8,9,10)=4")
+elsoc_long$educacion <- factor(elsoc_long$educacion,labels = c("Basica","Media","Tecnica","Universitaria"))
+elsoc_long$educacion <- sjlabelled::set_label(elsoc_long$educacion, label = c("Nivel Educacional"))     
+                                              #etiquetamos variable
+
+#Recode variable "d01_01" estatus social subjetivo / raneme "estatus".
+elsoc_long$estatus<- factor(car::recode(elsoc_long$d01_01, "0:4=1;5=2;6:10=3"),
+                          labels = c('Bajo','Medio','Alto'))
+elsoc_long$estatus <- sjlabelled::set_label(elsoc_long$estatus, label = c("Estatus Social Subjetivo")) 
+                      #etiquetamos variable
+
+#Recode variable "m02" situación ocupacional / rename "socup".
+elsoc_long$socup <- factor(car::recode(elsoc_long$m02,"c(1,2,3) = 1; 7 = 2; 6 = 3; 5 = 4; c(4, 8, 9) = 5"),
+                           labels = c("Trabajo remunerado", "Trabajo doméstico no remunerado", 
+                                      "Desempleado/a", "Jubilado/a o pensionado/a", 
+                                      "Otras categorías"))
+elsoc_long$socup <- na.replace(elsoc_long$socup, "NS/NR") #recode NA en categoría "NS/NR"
+elsoc_long$socup <- sjlabelled::set_label(elsoc_long$socup, label = c("Situación Ocupacional")) 
+                    #etiquetamos variable
+
+sjmisc::frq(elsoc_long$socup)
+
+#Recode variable "estrato" que refiere al tipo de ciudad / rename "tipo de ciudad"
+elsoc_long$tipo_ciudad <- factor(elsoc_long$estrato, labels = c('Gran Santiago', 'Gran Valparaíso', 'Gran 
+                                                                Concepción', 'Ciudades grandes', 'Ciudades 
+                                                                medianas', 'Ciudades pequeñas'))
+elsoc_long$tipo_ciudad <- sjlabelled::set_label(elsoc_long$estrato, label = c("Tipo de ciudad")) 
+                          #etiquetamos variable
+
+#Recode variable "region" correspondiente a regiones del país/ raname "zona" relativa a macrozona geográfica.
+elsoc_long$zona  <- car::recode(elsoc_long$region,
+                                "c('Tarapaca','Antofagasta','Atacama','Coquimbo','Arica')=1;
+                                c('Valparaiso','Lib. Gral. B. Ohiggins','B. Ohiggins', 'Maule','Bio Bio')=2;
+                                c('Araucania','Los Lagos','Aysen','Magallanes','Los Rios')=3 ;
+                                'Metropolitana'=4")
+elsoc_long$zona  <- factor(elsoc_long$zona,levels=c("1","2","3","4"), labels = 
+                                c("Norte","Centro","Sur","Metropolitana"))
+elsoc_long$zona <- sjlabelled::set_label(elsoc_long$zona, label = c("Zona Geográfica")) 
+                   #etiquetamos variable
+
+#Recode "c16" identificación con partidos políticos / rename "idpart".
+elsoc_long$idpart <- factor(elsoc_long$c16,labels = 
+                            c('PC','PH','RD','PRO','EVO','PPD','AMP','PDC','PRI','RN','UDI','PS','PRDS',
+                              'Otro','Ninguno'))
+elsoc_long$idpart <- sjlabelled::set_label(elsoc_long$idpart, label = c("Indentificación con Partido Político")) 
+                     #etiquetamos variable
+
+#Recode "c17" indentifiación con colación política /rename "idcoal".
+elsoc_long$idcoal <- factor(elsoc_long$c17, labels = c('Chile Vamos','Nueva Mayoría','Frente Amplio', 
+                                                       'Otra','Ninguna'))
+elsoc_long$idcoal <- na.replace(elsoc_long$idcoal, "NS/NR") #recode NA en categoría "NS/NR"
+elsoc_long$idcoal <- sjlabelled::set_label(elsoc_long$idcoal, label = 
+                                             c("Indentificación con Coalición Política")) 
+                    #etiquetamos variable
+
+#Recode "c28" grado de acuerdo con cambiar constitución / rename "cambiar_consti".
+elsoc_long$cambiar_consti <- factor(car::recode(elsoc_long$c28, "c(1,2)=1;c(3)=2;c(4,5)=3"))
+elsoc_long$cambiar_consti <- factor(elsoc_long$cambiar_consti, 
+                            labels = c('En desacuendo o totalmente en desacuerdo', 'Ni de acuerdo ni en 
+                                       desacuerdo', 'De acuerdo o totalmente de acuerdo'))
+elsoc_long$cambiar_consti <- sjlabelled::set_label(elsoc_long$cambiar_consti, label = 
+                                                     c("Grado de Acuerdo con Cambiar Constitución"))       
+                              #etiquetamos variable
+
+#Recode "c05_08" confianza en el presidente / rename "conf_presi".
+elsoc_long$conf_presi <- factor(elsoc_long$c05_08,labels = c('Nada', 'Poco', 'Algo', 'Bastante', 'Mucho'))
+elsoc_long$conf_presi <- sjlabelled::set_label(elsoc_long$conf_presi, label = c("Confianza en el 
+                                                                                Presidente"))
+                        #etiquetamos variable
+
+#Recode "c05_02" confianza en partidos políticos / rename "conf_part".
+elsoc_long$conf_part <- factor(elsoc_long$c05_02,labels = c('Nada', 'Poco', 'Algo', 'Bastante', 'Mucho'))
+elsoc_long$conf_part <- sjlabelled::set_label(elsoc_long$conf_part, label = 
+                                                c("Confianza en Partidos Políticos")) 
+                        #etiquetamos variable
+
+#Recode "c05_03" confianza en carabineros / rename "conf_carb".
+elsoc_long$conf_carb <- factor(elsoc_long$c05_03,labels = c('Nada', 'Poco', 'Algo', 'Bastante', 'Mucho'))
+elsoc_long$conf_carb <- sjlabelled::set_label(elsoc_long$conf_carb, label = 
+                                                c("Confianza en Carabineros"))   
+                        #etiquetamos variable
+
+
+
+```
+
+```{r visualizar bbdd procesada}
+#Visualizar la bbdd procesada con las variables incorporadas
+#knitr::kable(elsoc_long, "pipe")
+```
+
+### f. Guardar base de datos formato R.Data (opcional)
+
+```{r}
+#save(elsoc_long, file "[ruta de carpeta local]/elsoc_long.RData")
+```
+
+## 2. Visualización de datos
+
+### a. Acerca del uso de `survey` {#survey}
+
+El diseño muestral ELSOC es probabilístico, estratificado, por conglomerados y multietápico. Si bien la unidad de análisis es a nivel individual; las unidades de muestreo se realiza primero a nivel de ciudad (`estrata`), luego a nivel de manzana (`segmento`). Además de lo anterior, para lograr una correspondencia entre la muestra y la población objetivo, se utilizan ponderadores de corte transversal que ajustan por población regional y sexo. \footnote{Se espera que en una etapa posterior elaborar ponderadores ajustados a un diseño longitudinal}
+
+Dado lo anterior, se define el diseño de la encuesta longitudinal con la librería `survey` que reconoce a la base de datos como una muestra obtenida mediante un diseño muestral complejo. Para mayor información del uso de `survey` visitar el [link](https://rdrr.io/cran/survey/).
+
+```{r diseno, echo=TRUE}
+elsoc_diseno <- svydesign(ids = ~segmento, #muestreo por conglomerado a nivel de manzanas (segmento)
+                          strata = ~estrato, #muestreo estratificado a nivel ciudad (estato)
+                          weights = ~ponderador02, #ponderador de corte transversal
+                          nest = TRUE,
+                          data = elsoc_long)
+```
+
+El diseño de encuesta con `elsoc_diseno` permite realizar tablas ponderadas, tal que los análisis de gráficos a realizar sean representativos de la población objetivo de ELSOC.
+
+Se muestra un ejemplo de tabla ponderada con la variable de interés: `cambiar_consti` y agrupación por `ola`
+
+```{r datos tabla simple, echo=TRUE}
+datos.tabla <- data.frame(prop.table((svytable(~cambiar_consti + #variable de intrés
+                                                 ola, #variable de agrupación (puede ser más de una)
+                                               elsoc_diseno, #diseño muestral
+                                               round = F #redondear cifras
+                                               )))) 
+```
+
+
+A partir de la tabla anterior no es intuitiva la interpretación de los porcentajes obtenidos. Para encontrar las frecuencias de las categorías dentro de cada año de análisis entonces se realiza la siguiente tabla:
+
+```{r datos tabla complejo, echo=TRUE}
+#Crear tabla que agrupa las frecuencias por cada respuesta y agrupa las frecuencias dentro de cada año
+datos.grafico <- data.frame((svytable(~cambiar_consti + ola, elsoc_diseno, round = F))) %>% group_by(ola) %>% mutate(porcentaje=Freq/sum(Freq))
+
+#Verificar que en cada año las respuestas suman 100%
+head(datos.grafico)
+```
+
+### b. Acerca de los plots básicos en `ggplot2`
+
+Para la visualización de datos se utiliza el paquete `ggplot2`. Al igual que otros paquetes de R, contiene capas específicos para ejercer tareas, las cuales van desde el manejo de los datos hasta la estética en los gráficos. Este paquete pertenece a `tidyverse` por lo que se aconseja revisar en el siguiente [link](https://rdrr.io/cran/tidyverse/) en caso de ser necesario.
+
+A continuación especificaremos las herramientas de ggplot más comunes con su respectiva función/definición.
+
+* Data [`data`]: Es la base donde se encontrarán los datos para la creación de los gráficos 
+
+* Geometries [`geoms`]: Configura los elementos visuales de los gráficos. Puede modificar datos estadísticos y estética.
+ 
+* Aesthetics [`aes`]: Se encarga de la estética del gráfico. Se puede cambiar lo colores, tamaños y formas. También, es posible hacer agrupaciones y editar la posición (x, y). 
+
+* Facetting [`facet`]: Sive para realizar conjuntos o sub - conjuntos de datos.
+
+* Stats [`stat`]: Se utiliza para hacer transformaciones estadísticas que nos permite comprender los datos. 
+
+* Coordinate systems [`coord`]: Modifica los ejes *x* e *y*. Si es que este no es modificado, por defecto se genera el plano cartesiano.
+
+* Themes [`theme`]: Controla la visualización de todos los elementos gráficos, a excepción de los datos. 
+
+En las siguientes secciones se elaboran algunos de los gráficos más comunes para presentar data cualitativa y cuantitativa para encuestas longitudinales. Se recomienda revisar Revisar capitulo 1 de [Healy (2019)](#literatura), o capítulo 10 de [Irizarry (2021)](#literatura) para representar graficamente la información y datos en forma óptima.
+
+### c. Gráficos de barra
+
+#### c.1 Gráficos de barra que relacionan dos variables
+
+En esta sección aprenderá a realizar gráficos de barra simples para datos longitudinales. Este apartado elabora análisis para una sola variable categórica, la cual se puede agrupar bajo una variable categoría.
+
+**Paso 1**: En caso de querer crear una variable nueva a partir de otras variables en el listado, debe realizarlo antes de los pasos a continuación.
+
+**Paso 2**: Crear una tabla simplificada que agrupa la variable a analizar por otra variable de interés (ver [Sección 2.a](#survey) ) 
+
+- Rellenar nombre de variable de interés *[VARIABLE]* y agrupación de interés *[VAR_Z]*
+
+```{r tabla_datos_gráfico, echo=TRUE}
+#Ejemplo: [VARIABLE = conf_presi] y [VAR_Z = ola]
+datos.grafico <- data.frame((svytable(~conf_presi + ola, elsoc_diseno, round = F))) %>%
+  group_by(ola) %>% mutate(porcentaje=Freq/sum(Freq)) %>%
+  na.omit()
+```
+
+**Paso 3**: Revisar la tabla recién creada: columnas y datos
+
+```{r revisión, echo=TRUE}
+head(datos.grafico)
+```
+
+Luego de hacer esos 3 pasos, se realizan diversos gráficos que relacionan dos variables:
+
+(1) Variable categórica de interés *[VARIABLE]*
+
+(2) Variable que agrupa (ej: ola, tramo de edad, sexo, ciudad, zona, etc..) *[VAR_Z]*
+
+
+##### c.1.1 Gráfico de Barras con X = 'Categoría' según Ola
+
+Este tipo de gráfico es el más simple de crear y se utiliza para visualizar respuestas desglosada por año. Es útil en estudios longitudinales debido a su potencial de comparación de las respuestas señaladas por los encuestados en los distintos años de participación. 
+
+```{r bar_x_categoría, echo=TRUE}
+#Nombrar el gráfico (c.1.1) y seleccionar datos (datos.grafico)
+c.1.1 <-datos.grafico %>% 
+    #indicar el contenido del gráfico: ejes y relleno (fill) por ola
+    ggplot(aes(y = porcentaje, x = conf_presi, fill = ola, 
+               label = as.character(scales::percent(porcentaje, accuracy = .1)))) +
+    #fijar el fondo y el marco del gráfico uniforme
+    theme_bw() + 
+    #geom_col para usar variable y=porcentaje. 'dodge2' para formato side-to-side
+    geom_col(position= 'dodge2') +
+    #escala del eje y en porcentajes del 0 al 100%
+    scale_y_continuous(labels = scales::percent,
+                       limits = c(0, 1)) +
+    #Nombres de los ejes se eliminan
+    ylab(label = NULL) +
+    xlab(label = NULL) +
+    #colores oficiales por ola: degradé 'viridis'
+    scale_fill_viridis_d(begin = 0, end = .85, direction = -1, option = 'viridis') +
+    #etiquetas por sobre cada barra
+    geom_text(vjust = -0.8,
+              position = position_dodge(width = .9),
+              size= 2.75) +
+    #posicionamiento de leyenda arriba
+    theme(legend.position = 'top',
+          legend.title = element_blank()) +
+    #titulo del gráfico
+    ggtitle('Confianza en el Presidente(a) de la República según año')
+
+c.1.1
+```
+
+```{r N1, include=FALSE}
+N<-round(sum(datos.grafico$Freq),0)
+```
+
+Nota: Resultados Ponderados (con Diseño Muestral Complejo). N=  `r N`
+
+##### c.1.2 Gráfico de Barras con X = 'Ola' según categoría
+
+El siguiente gráfico es parecido al anterior en cuanto a su forma, pero muestra una otra manera de expresar la comparación de respuestas por año. Se utiliza para visualizar cada año en forma individual de forma Dodge. 
+
+```{r bar_x_ola_dodge, echo=TRUE}
+
+c.1.2 <-datos.grafico %>% 
+  ggplot(aes(y = porcentaje, x = ola, fill = conf_presi, 
+             label = as.character(scales::percent(porcentaje, accuracy = .1)))) + 
+  theme_bw() + 
+  geom_col(position = 'dodge2') +
+  scale_y_continuous(labels = scales::percent,
+                     limits = c(0, 1)) +
+  ylab(label = NULL) +
+  xlab(label = NULL) +
+  scale_fill_viridis_d(begin = 0, end = .85, direction = -1, option = 'viridis') +
+  geom_text(vjust = -0.8,
+            position = position_dodge(width = .9),
+            size= 2.75) +
+  theme(legend.position = 'top',
+        legend.title = element_blank()) +
+ggtitle('Confianza en el Presidente(a) de la República según año')
+
+c.1.2
+```
+
+```{r N2, include=FALSE}
+N<-round(sum(datos.grafico$Freq),0)
+```
+
+Nota: Resultados Ponderados (con Diseño Muestral Complejo). N=  `r N`
+
+##### c.1.3 Gráfico de Barras con X = 'Categoría' en una  ola particular
+
+Este tipo de gráfico es el más simple en torno a su visualización. En datos longitudinales, su utilidad se encuentra en la posibilidad de gráficar resultado por año (Ola) y así visualizar datos específicos. 
+
+```{r bar_x_cat_por_ola, echo=TRUE}
+#Para seleccionar un sólo año a analizar, se realiza un subset de los datos a graficar
+datos.subset <- droplevels(subset(datos.grafico, datos.grafico$ola == '2019'))
+
+c.1.3 <- datos.subset %>% 
+    ggplot(aes(y = porcentaje, x = conf_presi, fill = conf_presi, 
+               label = as.character(scales::percent(porcentaje, accuracy = .1)))) +
+  theme_bw() + 
+    geom_col() +
+    scale_y_continuous(labels = scales::percent,
+                       limits = c(0, 1)) +
+    ylab(label = NULL) +
+    xlab(label = NULL) +
+    scale_fill_viridis_d(begin = 0, end = .85, direction = -1, option = 'viridis') +
+    geom_text(vjust = -0.8,
+              position = position_dodge(width = .9),
+              size= 2.75) +
+    theme(legend.position = 'none',   ## Eliminar leyenda al no ser necesaria
+          legend.title = element_blank()) +
+    ggtitle('Confianza en el Presidente(a) de la República el año 2019')
+
+c.1.3
+```
+
+```{r N3, include=FALSE}
+N<-round(sum(datos.subset$Freq),0)
+```
+
+Nota: Resultados Ponderados (con Diseño Muestral Complejo). N=  `r N`
+
+##### c.1.4 Gráfico de Barras con X = 'Ola' - Stack
+
+Este gráfico tiene como finalidad simplificar las interpretaciones anteriores, mediante (1) agrupación de respuestas y (2) visualización apilada. Se utiliza para visualizar cada año en forma individual de forma Stack.
+
+(1) recodificar la variable de interés en tres categorías
+```{r recode conf presi, echo=TRUE}
+#agregar variable a bbdd original
+elsoc_long$conf_presi_rec<- car::recode(elsoc_long$conf_presi, 
+                                           "c('Nada','Poco')=1;
+                                           c('Algo')=2;
+                                           c('Bastante','Mucho')=3")
+elsoc_long$conf_presi_rec <- factor(elsoc_long$conf_presi_rec,labels = c('Nada o Poco', 'Algo', 'Bastante o Mucho'))
+
+#volver a realizar el código de la encuesta debido a la presencia de una nueva variable
+elsoc_diseno <- svydesign(ids = ~segmento, strata = ~estrato, weights = ~ponderador02,nest = TRUE, data = elsoc_long)
+
+#crear tabla para el gráfico
+datos.grafico <- data.frame((svytable(~conf_presi_rec + ola, elsoc_diseno, round = F))) %>% group_by(ola) %>% mutate(porcentaje=Freq/sum(Freq))
+```
+
+(2) crear gráfico apilado (Stack)
+```{r bar_x_ola_stack, echo=TRUE}
+c.1.4 <-datos.grafico %>% 
+  ggplot(aes(y = porcentaje, x = ola, fill = conf_presi_rec, 
+             label = as.character(scales::percent(porcentaje, accuracy = .1)))) + 
+  theme_bw() + 
+  geom_col(position = 'Stack') +
+  scale_y_continuous(labels = scales::percent,
+                     limits = c(0, 1)) +
+  ylab(label = NULL) +
+  xlab(label = NULL) +
+  scale_fill_viridis_d(begin = .33, end = .66, direction = -1, option = 'viridis') +
+  #cambiar geom_text tal que: Stack y cambio colores
+  geom_text(position = position_stack(vjust = .5),
+            size= 2.75, color = rep.int(c('black', 'white', 'white'), 4)) + 
+  theme(legend.position = 'top',
+        legend.title = element_blank()) +
+  ggtitle('Confianza en el Presidente(a) de la República cada año')
+
+c.1.4
+```
+
+```{r N4, include=FALSE}
+N<-round(sum(datos.grafico$Freq),0)
+```
+
+Nota: Resultados Ponderados (con Diseño Muestral Complejo). N=  `r N`
+
+#### c.2 Gráficos de barra que relacionan más de dos variables
+
+##### c.2.1 Gráfico de Barras con dos categorías de agrupación: Edad y Ola
+
+En el gráfico se puede ver la comparación etaria respecto a la confianza al presidente de la república, según año. Este gráfico es muy útil para la comparación y análisis dentro de ciertas categorías de agrupación (within).
+
+```{r edad_ola}
+datos.grafico <- data.frame((svytable(~conf_presi + ola + edad, elsoc_diseno, round = F))) %>% group_by(ola, edad) %>% mutate(porcentaje=Freq/sum(Freq))
+
+c.2.1 <-datos.grafico %>% 
+    ggplot(aes(y = porcentaje, x = ola, fill = conf_presi, 
+               label = as.character(scales::percent(porcentaje, accuracy = .1)))) +
+  theme_bw() + 
+    geom_col(position = 'dodge2') +
+    scale_y_continuous(labels = scales::percent,
+                       limits = c(0, 1)) +
+    ylab(label = NULL) +
+    xlab(label = NULL) +
+    scale_fill_viridis_d(begin = 0, end = .85, direction = -1, option = 'viridis') +
+    #Agrego facer_wrap para hacer un Gráfico para cada tramo etario
+    facet_wrap(datos.grafico$edad)+
+    theme(legend.position = 'top',
+          legend.title = element_blank()) +
+    ggtitle('Confianza en el Presidente(a) de la República según año y grupo etario')
+c.2.1
+```
+
+```{r N5, include=FALSE}
+N<-round(sum(datos.grafico$Freq),0)
+```
+
+Nota: Resultados Ponderados (con Diseño Muestral Complejo). N=  `r N`
+
+El gráfico anterior es complejo debido a la cantidad de información que contiene, por lo que se elabora una simplificación de lo anterior (revisar literatura relevante para la visualización de datos)
+
+```{r}
+datos.grafico <- data.frame((svytable(~conf_presi_rec + ola + edad, elsoc_diseno, round = F))) %>% group_by(ola, edad) %>% mutate(porcentaje=Freq/sum(Freq))
+
+
+#Seleccionar una sóla respuesta, se realiza un subset de los datos a graficar
+datos.subset <- droplevels(subset(datos.grafico, datos.grafico$conf_presi_rec== 'Nada o Poco'))
+
+c.2.2 <-datos.subset %>% 
+  ggplot(aes(y = porcentaje, x = edad, fill = ola, 
+             label = as.character(scales::percent(porcentaje, accuracy = .1)))) + 
+  theme_bw() + 
+  geom_col(position = 'Dodge') +
+  scale_y_continuous(labels = scales::percent,
+                     limits = c(0, 1)) +
+  ylab(label = NULL) +
+  xlab(label = NULL) +
+  scale_fill_viridis_d(begin = 0, end = .85, direction = -1, option = 'viridis') +
+  theme(legend.position = 'top',
+        legend.title = element_blank()) +
+  geom_text(vjust = -0.8,
+              position = position_dodge(width = .9),
+              size= 2.75) +
+  ggtitle('"Poco o Nada" de Confianza en el Presidente(a) de la República según edad y año')
+
+c.2.2
+```
+
+```{r N6, include=FALSE}
+N<-round(sum(datos.subset$Freq),0)
+```
+
+Nota: Resultados Ponderados (con Diseño Muestral Complejo). N=  `r N`
+
+##### c.2.3 Gráfico de Barra para tres variables por Ola
+
+En el siguiente gráfico se muestra los % de respuesta respecto a la confianza en carabineros, partidos políticos y presidente/a de la república. En este sentido, puede ser útil incorporar este tipo de gráfico si se desea comparar las respuestas por año de 3 variables.
+
+Primero se debe recodificar las dos variables nuevas: `conf_part` y `conf_carb` tal que tengan las mismas tres categorías agrupadas que `conf_presi`
+```{r}
+#agregar variables a bbdd original
+#partidos politicos
+elsoc_long$conf_part_rec<- car::recode(elsoc_long$conf_part, 
+                                           "c('Nada','Poco')=1;
+                                           c('Algo')=2;
+                                           c('Bastante','Mucho')=3")
+elsoc_long$conf_part_rec <- factor(elsoc_long$conf_part_rec,labels = c('Nada o Poco', 'Algo', 'Bastante o Mucho'))
+#carabineros
+elsoc_long$conf_carb_rec<- car::recode(elsoc_long$conf_carb, 
+                                           "c('Nada','Poco')=1;
+                                           c('Algo')=2;
+                                           c('Bastante','Mucho')=3")
+elsoc_long$conf_carb_rec <- factor(elsoc_long$conf_carb_rec,labels = c('Nada o Poco', 'Algo', 'Bastante o Mucho'))
+
+#volver a realizar el código de la encuesta debido a la presencia de una nueva variable
+elsoc_diseno <- svydesign(ids = ~segmento, strata = ~estrato, weights = ~ponderador02,nest = TRUE, data = elsoc_long)
+```
+
+Luego se realiza las tablas de porcentajes y se trasponen por cada variable.
+```{r tres_var_ola}
+datos.presi <- data.frame((svytable(~conf_presi_rec + ola, elsoc_diseno, round = F))) %>% group_by(ola) %>% mutate(p_presi=Freq/sum(Freq))
+datos.presi$ola <- NULL
+datos.part <- data.frame((svytable(~conf_part_rec + ola, elsoc_diseno, round = F))) %>% group_by(ola) %>% mutate(p_part=Freq/sum(Freq))
+datos.part$ola <- NULL
+datos.carb <- data.frame((svytable(~conf_carb_rec + ola, elsoc_diseno, round = F))) %>% group_by(ola) %>% mutate(p_carb=Freq/sum(Freq))
+
+datos.grafico1<- cbind(datos.presi, datos.part, datos.carb)
+
+#trasponer según variable
+datos.grafico <- datos.grafico1 %>% 
+        pivot_longer(cols = starts_with('conf_'))  %>%
+        mutate(variable = factor(name, labels = c('Presidente/a de la Republica', 'Partidos Políticos','Carabineros de Chile'))) %>% 
+                                        drop_na()
+
+datos.grafico$porcentaje <- with(datos.grafico, case_when(
+  variable == 'Carabineros de Chile' ~ p_carb,
+  variable == 'Presidente/a de la Republica' ~ p_presi,
+  variable == 'Partidos Políticos' ~ p_part))
+```
+
+```{r graficando, echo=TRUE}
+c.2.3 <-datos.grafico %>% 
+    ggplot(aes(y = porcentaje, x = ola, fill = value, 
+               label = as.character(scales::percent(porcentaje, accuracy = .1)))) +
+  theme_bw() + 
+    geom_col(width = 0.75, position = "Stack") +
+    scale_y_continuous(labels = scales::percent,
+                       limits = c(0, 1)) +
+    ylab(label = NULL) +
+    xlab(label = NULL) +
+    scale_fill_viridis_d(begin = .33, end = .66, direction = -1, option = 'viridis') +
+    facet_grid(.~variable) + 
+    geom_text(position = position_stack(vjust = .5),
+            size= 1.75, color = rep(c('black', 'white', 'white'), 12))+
+    theme(legend.position = 'top',
+        legend.title = element_blank()) +
+    ggtitle('Confianza en instituciones por año')
+
+c.2.3
+```
+
+```{r N7, include=FALSE}
+N<-round(sum(datos.grafico$Freq),0)
+N<-(N/3)
+```
+
+Nota: Resultados Ponderados (con Diseño Muestral Complejo). N=  `r N`
+
+##### c.2.4 Gráfico de Barra para medir cambio en el tiempo de una variable
+
+El último gráfico muestra el cambio de la percepción del estatus social a lo largo del tiempo. Lo interesante de este gráfico es la posibilidad de agrupar años para una mejor y más clara visualización. Este tipo de gráficos se puede utilizar si es que se quiere percibir cambios a nivel macro de alguna variable.
+
+
+```{r recodificar varibales}
+#Recolectar variables a utilizar
+datos.grafico3 <- data.frame(cbind(elsoc_long$idencuesta, elsoc_long$ola,elsoc_long$estatus,elsoc_long$ponderador02))
+colnames(datos.grafico3) <- c("idencuesta", "ola", "estatus", "ponderador02")
+
+#Pasar tabla de long a wide
+datos.grafico3 <- panel_data(datos.grafico3, id = idencuesta, wave = ola)
+datos.wide <- widen_panel(datos.grafico3, separator = "_")
+
+#Recodificar cambios
+datos.wide$cambio_estatus_4 <- factor(with(datos.wide, case_when(
+    estatus_4 == estatus_3 & !is.na(estatus_4) & !is.na(estatus_3) ~ 2,
+    estatus_4 > estatus_3  & !is.na(estatus_4) & !is.na(estatus_3) ~ 1,
+    estatus_4 < estatus_3  & !is.na(estatus_4) & !is.na(estatus_3) ~ 3)),
+    labels = c('Aumenta', 'Se mantiene', 'Disminuye'))
+datos.wide$cambio_estatus_3 <- factor(with(datos.wide, case_when(
+    estatus_3 == estatus_2 & !is.na(estatus_3) & !is.na(estatus_2) ~ 2,
+    estatus_3 > estatus_2  & !is.na(estatus_3) & !is.na(estatus_2) ~ 1,
+    estatus_3 < estatus_2  & !is.na(estatus_3) & !is.na(estatus_2) ~ 3)),
+    labels = c('Aumenta', 'Se mantiene', 'Disminuye'))
+datos.wide$cambio_estatus_2 <- factor(with(datos.wide, case_when(
+    estatus_2 == estatus_1 & !is.na(estatus_2) & !is.na(estatus_1) ~ 2,
+    estatus_2 > estatus_1  & !is.na(estatus_2) & !is.na(estatus_1) ~ 1,
+    estatus_2 < estatus_1  & !is.na(estatus_2) & !is.na(estatus_1) ~ 3)),
+    labels = c('Aumenta', 'Se mantiene', 'Disminuye'))
+
+#Debido a la complejidad de agregar los ponderadores a partir del diseño encuesta, se realiza un ajuste manual con el ponderador06 del año 2016.
+datos.grafico <- datos.wide %>% 
+  pivot_longer(cols = c(cambio_estatus_2,cambio_estatus_3,cambio_estatus_4), names_to = "cambio_estatus", 
+               values_to = "respuesta") %>% 
+               drop_na()%>%
+               group_by(cambio_estatus, respuesta) %>% 
+               summarise(n1=sum(ponderador02_1,na.rm=T)) %>% 
+               mutate(n2 = sum(n1, na.rm = TRUE), porcentaje = n1/n2)%>% 
+               ungroup()
+
+#Recodificamos los periodos de cambio
+datos.grafico$cambio_estatus<- car::recode(datos.grafico$cambio_estatus, 
+                           "'cambio_estatus_2'='2016-2017';'cambio_estatus_3'='2017-2018';
+                           'cambio_estatus_4'='2018-2019'")
+
+```
+
+
+```{r crear ggplot}
+#Creamos el gráfico
+
+c.2.4 <-ggplot(datos.grafico, aes(y=porcentaje, x=cambio_estatus,fill=respuesta ,label = 
+                                    as.character(scales::percent(porcentaje, accuracy = .1))))+
+    theme_bw()+
+  geom_col(position = "stack") +
+  scale_y_continuous(labels = scales::percent,
+                     limits = c(0, 1)) +
+  ylab(label = NULL) +
+  xlab(label = NULL) +
+  scale_fill_viridis_d(begin = .33, end = .66, direction = -1, option = 'viridis') +
+  theme(legend.position = 'top',
+        legend.title = element_blank()) +
+  geom_text(position = position_stack(vjust = .5),
+            size= 2.75,
+            color = rep(c('black', 'white', 'white'), 3))+
+    ggtitle('Cambio en el tiempo de percepción del estatus social')
+
+c.2.4
+```
+```{r N8, include=FALSE}
+N<-round(sum(datos.grafico$n1),0)
+```
+
+Nota: Resultados Ponderados (con Diseño Muestral Complejo). N=  `r N`
+
+### d. Gráficos "Alluvial"
+En esta sección aprenderá a realizar gráficos "alluvial" para datos longitudinales. Este tipo de gráfico permite visualizar los cambios en la distribución de frecuencias para variables categóricas a lo largo del tiempo. Previo a la visualización de este tipo de gráfico, se siguen dos pasos necesarios para la correcta especificación de variables, a saber: 
+
+**Paso 1**: Crear una base de datos que agrupa la frecuencia de la variables de interés por otra variable de agrupación (ej. `ola`).
+
+**Paso 2**: Crear una tabla que agrupa frecuencias en función de las categorías de respuesta tanto de la variable de interés como de la variable de agrupación (ej. `ola`)
+
+#### d.1 Alluvial para una variable en cuatro olas: identificación con coalición política.
+
+```{r}
+#Paso 1
+datos.d.1 <- data.frame((svytable(~idcoal + ola + idencuesta, elsoc_diseno, round = F))) %>% dplyr::filter(Freq>0)  %>% group_by(ola) %>% mutate(porcentaje=Freq/sum(Freq)) %>% na.omit()
+
+#Paso 2
+etiquetas.d.1 <- data.frame((svytable(~idcoal + ola, elsoc_diseno, round = F))) %>% group_by(ola) %>% mutate(porcentaje=Freq/sum(Freq)) %>% na.omit() %>% 
+  mutate(idencuesta = 1)
+```
+
+```{r gráfíco alluvial .d.1: idcoal 4 olas}
+d.1 <- ggplot(datos.d.1, aes(x = ola, fill = idcoal, stratum = idcoal,
+                             alluvium = idencuesta, y = porcentaje))+
+    ggalluvial::geom_flow(alpha = .66) + 
+    ggalluvial::geom_stratum(linetype = 0) +
+    scale_y_continuous(labels = scales::percent) + 
+    ylab(label = NULL) +
+    xlab(label = NULL) + 
+    theme(legend.position = 'top',
+          legend.title = element_blank()) +
+    scale_fill_viridis_d(begin = 0, end = .95, direction = -1, option = 'viridis') +
+    geom_text(data = etiquetas.d.1, 
+              aes(label = ifelse(porcentaje > 0.03 , scales::percent(porcentaje, accuracy = .1),"")),
+              position = position_stack(vjust = .5),
+              show.legend = FALSE,
+              size = 2,
+              color = rep('white'))+
+  ggtitle('Cambio de frecuencias de indentificación con coalición política según año')
+
+d.1
+```
+
+```{r N9, include=FALSE}
+N<-round(sum(datos.d.1$Freq),0)
+```
+
+Nota: Resultados Ponderados (con Diseño Muestral Complejo). N=  `r N`
+
+#### d.2 Alluvial para dos olas: identificación con coalición política.
+```{r}
+#Paso 1
+datos.d.2 <- data.frame((svytable(~idcoal + ola + idencuesta, elsoc_diseno, round = F))) %>% dplyr::filter(Freq>0)  %>% group_by(ola) %>% mutate(porcentaje=Freq/sum(Freq)) %>% na.omit()
+
+#Paso 1.1: crear un subset sólo para los años 2017 y 2019
+subset.d.2 <- droplevels(subset(datos.d.2, datos.d.2$ola == '2017' | datos.d.2$ola == '2019'))
+
+#Paso 2
+etiquetas.d.2 <- data.frame((svytable(~idcoal + ola, elsoc_diseno, round = F))) %>% group_by(ola) %>% mutate(porcentaje=Freq/sum(Freq)) %>% na.omit() %>% 
+  mutate(idencuesta = 1)
+
+#Paso 2.2: crear un subset sólo para los años 2017 y 2019
+etiquetas.d.2 <- droplevels(subset(etiquetas.d.2, etiquetas.d.2$ola == '2017' | etiquetas.d.2$ola == '2019'))
+```
+
+```{r gráfico alluvial .d.2: idnull 2 olas}
+d.2 <- ggplot(subset.d.2, aes(x = ola, fill = idcoal, stratum = idcoal, 
+               alluvium = idencuesta, y = porcentaje)) +
+    ggalluvial::geom_flow(alpha = .66) + 
+    ggalluvial::geom_stratum(linetype = 0) +
+    scale_y_continuous(labels = scales::percent) + 
+    ylab(label = NULL) +
+    xlab(label = NULL) + 
+    theme(legend.position = 'top',
+          legend.title = element_blank()) +
+    scale_fill_viridis_d(begin = 0, end = .95, direction = -1, option = 'viridis') +
+    geom_text(data = etiquetas.d.2, 
+              aes(label = ifelse(porcentaje > 0.03 , scales::percent(porcentaje, accuracy = .1),"")),
+              position = position_stack(vjust = .5),
+              show.legend = FALSE,
+              size = 2.75,
+              color = rep('white')) +
+    ggtitle('Cambio de frecuencias de indentificación con coalición política según año')
+
+d.2
+```
+
+```{r N10, include=FALSE}
+N<-round(sum(subset.d.2$Freq),0)
+```
+
+Nota: Resultados Ponderados (con Diseño Muestral Complejo). N=  `r N`
+
+#### d.3 Alluvial para dos o más categorías: situación ocupacional
+```{r}
+
+#Paso 1
+datos.d.3 <- data.frame((svytable(~idcoal + ola + idencuesta + socup + sexo, elsoc_diseno, round = F))) %>% dplyr::filter(Freq>0)  %>% group_by(ola,sexo) %>% mutate(porcentaje=Freq/sum(Freq)) %>% na.omit()
+
+#Paso 1.1: crear un subset sólo para los años 2017 y 2019
+subset.d.3 <- droplevels(subset(datos.d.3, datos.d.3$ola == '2017' | datos.d.3$ola == '2019'))
+
+#Paso 2
+etiquetas.d.3 <- data.frame((svytable(~idcoal + ola + socup + sexo, elsoc_diseno, round = F))) %>% group_by(ola,sexo) %>% mutate(porcentaje=Freq/sum(Freq)) %>% na.omit() %>% 
+  mutate(idencuesta = 1)
+
+#Paso 2.2: crear un subset sólo para los años 2017 y 2019
+etiquetas.d.3 <- droplevels(subset(etiquetas.d.3, etiquetas.d.3$ola == '2017' | etiquetas.d.3$ola == '2019'))
+```
+
+```{r gráfico alluvial .d.3: socup por sexo}
+d.3 <- ggplot(subset.d.3, aes(x = ola, fill = socup, stratum = socup, 
+               alluvium = idencuesta, y = porcentaje)) +
+    ggalluvial::geom_flow(alpha = .66) + 
+    ggalluvial::geom_stratum(linetype = 0) +
+    scale_y_continuous(labels = scales::percent) +
+    ylab(label = NULL) +
+    xlab(label = NULL) +
+    theme(legend.position = 'top',
+          legend.title = element_blank()) +
+    scale_fill_viridis_d(begin = 0, end = .9, direction = -1, option = 'viridis') +
+    facet_wrap(.~sexo)+
+    geom_text(data = etiquetas.d.3, 
+              aes(label = ifelse(porcentaje > 0.1 , scales::percent(porcentaje, accuracy = .1),"")),
+              position = position_stack(vjust = .5),
+              show.legend = FALSE,
+              size = 2.75,
+              color = rep('white'))+
+  ggtitle('Cambio de frecuencias en situación ocupacional para hombres y mujeres')
+
+d.3
+```
+
+```{r N11, include=FALSE}
+N<-round(sum(subset.d.3$Freq),0)
+```
+
+Nota: Resultados Ponderados (con Diseño Muestral Complejo). N=  `r N`
+
+### e. Gráficos de lineas
+
+En esta sección aprenderá a realizar gráficos de lineas y puntos para datos longitudinales. Este tipo de gráfico permite visualizar los cambios de frecuencia para variables categóricas a lo largo del tiempo. Al igual que la sección anterior, se siguen dos pasos necesarios para la correcta especificación de variables, a saber: 
+
+**Paso 1**: Crear una base de datos que agrupa la frecuencia de la variables de interés por otra variable de agrupación (ej. `ola`).
+
+**Paso 2**: Crear una tabla que agrupa frecuencias en función de las categorías de respuesta tanto de la variable de interés como de la variable de agrupación (ej. `ola`)
+
+#### e.1 Lineas y puntos para una variable.
+```{r}
+#Paso 1
+datos.e.1 <- data.frame((svytable(~conf_presi + ola, elsoc_diseno, round = F))) %>% group_by(ola) %>% mutate(porcentaje=Freq/sum(Freq))
+```
+
+```{r grafico-lineas-e.1}
+e.1 <- ggplot(datos.e.1,aes(y = porcentaje, x = ola, color = conf_presi, group = conf_presi,
+               label = as.character(scales::percent(porcentaje, accuracy = .1)))) +
+    theme_bw() +   
+    geom_line(size = 1) +
+    geom_point(size = 1.8) +
+    scale_y_continuous(labels = scales::percent,
+                       limits = c(0,1)) +
+    ylab(label = NULL) +
+    xlab(label = NULL) +
+    scale_color_viridis_d(begin = 0, end = .95, direction = 1, option = 'viridis') +
+    geom_text_repel(posilinetion = position_dodge(width = .9),
+    size= 2.25) + 
+    theme(legend.position = 'top',
+          legend.title = element_blank())
+
+e.1
+```
+
+```{r N12, include=FALSE}
+N<-round(sum(datos.e.1$Freq),0)
+```
+
+Nota: Resultados Ponderados (con Diseño Muestral Complejo). N=  `r N`
+
+#### e.2 Lineas y puntos para más de una variable.
+
+```{r}
+#Paso 1: Mismo código que gráfico c.2.3
+datos.presi <- data.frame((svytable(~conf_presi_rec + ola, elsoc_diseno, round = F))) %>% group_by(ola) %>% mutate(p_presi=Freq/sum(Freq))
+datos.presi$ola <- NULL
+datos.part <- data.frame((svytable(~conf_part_rec + ola, elsoc_diseno, round = F))) %>% group_by(ola) %>% mutate(p_part=Freq/sum(Freq))
+datos.part$ola <- NULL
+datos.carb <- data.frame((svytable(~conf_carb_rec + ola, elsoc_diseno, round = F))) %>% group_by(ola) %>% mutate(p_carb=Freq/sum(Freq))
+
+datos.grafico.e.2<- cbind(datos.presi, datos.part, datos.carb)
+
+#trasponer según variable
+datos.grafico <- datos.grafico.e.2 %>% 
+        pivot_longer(cols = starts_with('conf_'))  %>%
+        mutate(variable = factor(name,
+                             labels = c('Presidente/a de la Republica', 'Partidos Políticos', 
+                             'Carabineros de Chile'))) %>% 
+                                        drop_na()
+
+datos.grafico$porcentaje <- with(datos.grafico, case_when(
+  variable == 'Carabineros de Chile' ~ p_carb,
+  variable == 'Presidente/a de la Republica' ~ p_presi,
+  variable == 'Partidos Políticos' ~ p_part))
+
+#Paso 1.2: filtrar el subset manteniendo "Nada o Poco"
+subset.e.2 <- droplevels(subset(datos.grafico, value == 'Nada o Poco'))
+```
+
+```{r grafico-lineas-e.2}
+e.2 <- ggplot(subset.e.2, aes(y = porcentaje, x = ola, color = variable, group = variable,
+               label = as.character(scales::percent(porcentaje, accuracy = .1)))) +
+    theme_bw() +   
+    geom_line(size = 1) +
+    geom_point(size = 1.8) +
+    scale_y_continuous(labels = scales::percent,
+                       limits = c(0,1)) +
+    ylab(label = NULL) +
+    xlab(label = NULL) +
+    scale_color_viridis_d(begin = .33, end = .66, direction = 1, option = 'viridis') +
+    geom_text(vjust = -0.8,
+    posilinetion = position_dodge(width = .9),
+    size= 2.75) +
+    theme(legend.position = 'top',
+          legend.title = element_blank()) +
+    ggtitle('Cambio de frecuencias en el grado de confianza "Nada" en algunas instituciones')
+
+e.2
+```
+
+```{r N13, include=FALSE}
+N<-round(sum(subset.e.2$Freq),0)
+N<-(N/3)
+```
+
+Nota: Resultados Ponderados (con Diseño Muestral Complejo). N=  `r N`
+
+
+#### e.3 Lineas y puntos para una variables y más de una agrupación
+```{r}
+#Paso 1: Mismo código que gráfico c.2.3
+datos.presi <- data.frame((svytable(~conf_presi_rec + ola + zona, elsoc_diseno, round = F))) %>% group_by(ola, zona) %>% mutate(p_presi=Freq/sum(Freq))
+datos.presi$ola <- NULL
+datos.presi$zona <- NULL
+datos.part <- data.frame((svytable(~conf_part_rec + ola + zona, elsoc_diseno, round = F))) %>% group_by(ola, zona) %>% mutate(p_part=Freq/sum(Freq))
+datos.part$ola <- NULL
+datos.presi$zona <- NULL
+datos.carb <- data.frame((svytable(~conf_carb_rec + ola + zona, elsoc_diseno, round = F))) %>% group_by(ola, zona) %>% mutate(p_carb=Freq/sum(Freq))
+
+datos.grafico.e.3<- cbind(datos.presi, datos.part, datos.carb)
+
+#trasponer según variable
+datos.grafico <- datos.grafico.e.3 %>% 
+        pivot_longer(cols = starts_with('conf_'))  %>%
+        mutate(variable = factor(name,
+                             labels = c('Presidente/a de la Republica', 'Partidos Políticos', 
+                             'Carabineros de Chile'))) %>% 
+                                        drop_na()
+
+datos.grafico$porcentaje <- with(datos.grafico, case_when(
+  variable == 'Carabineros de Chile' ~ p_carb,
+  variable == 'Presidente/a de la Republica' ~ p_presi,
+  variable == 'Partidos Políticos' ~ p_part))
+
+#Paso 1.2: filtrar el subset manteniendo "Nada o Poco"
+subset.e.3 <- droplevels(subset(datos.grafico, value == 'Nada o Poco'))
+```
+
+```{r grafico-linea-e.3}
+e.3 <- ggplot(subset.e.3,aes(y = porcentaje, x = ola, color = variable, group = variable,
+               label = as.character(scales::percent(porcentaje, accuracy = .1)))) +
+    theme_bw() +  
+    geom_line(size = 1) +
+    geom_point(size = 1.8) +
+    scale_y_continuous(labels = scales::percent,
+                       limits = c(0,1)) +
+    ylab(label = NULL) +
+    xlab(label = NULL) +
+    scale_color_viridis_d(begin = .33, end = .66, direction = 1, option = 'viridis') +
+    facet_wrap(.~zona)+
+    geom_text(vjust = -0.8,
+    posilinetion = position_dodge(width = .9),
+    size= 1.75) +
+    theme(legend.position = 'top',
+          legend.title = element_blank()) +
+    ggtitle('Cambio de frecuencias en el grado de confianza "Nada" en algunas instituciones')
+
+e.3
+```
+
+```{r N14, include=FALSE}
+N<-round(sum(subset.e.3$Freq),0)
+N<-(N/3)
+```
+
+Nota: Resultados Ponderados (con Diseño Muestral Complejo). N=  `r N`
+
+
+A lo largo de este documento se explicaron los pasos para lograr un grupo de visualizaciones para los datos del Estudio Longitudinal Social de Chile (ELSOC) mediante paquete `ggplot2`. En esta última sección se expusieron tres tipos de gráficos: de barra, alluvial y de líneas. Para análisis de datos más complejo, se recomienda revisar [literatura](#literatura) para hacer uso de modelos lineales debido a su utilidad al relacionar la diversidad de variables que existen en ELSOC.
+
+
+## 3. Literatura Relevante {#literatura}
+
+Healy, K. (2019). *Data Visualization: A practical introduction*. Recuperado de: [https://socviz.co/?fbclid=IwAR2Y6epYvtWSrE9sLk5wVBJopYoh4YXKM2FkNdfMCYBuaH6hYntXM-Ep6Ec](https://socviz.co/?fbclid=IwAR2Y6epYvtWSrE9sLk5wVBJopYoh4YXKM2FkNdfMCYBuaH6hYntXM-Ep6Ec)
+
+Irizarry, R (2021). *Introduction to Data Science, Data Science and Prediction Algorithms with R*. Recuperado de: [https://rafalab.github.io/dsbook/](https://rafalab.github.io/dsbook/)
+
+Kabacoff, R. (2020). *Data Visualization with R*. Recuperado de: [https://rkabacoff.github.io/datavis/](https://rkabacoff.github.io/datavis/)
+
+
