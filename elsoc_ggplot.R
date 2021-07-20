@@ -160,39 +160,27 @@ knitr::kable(elsoc_long, "pipe")
 
 
 #### Trabajando con una encuesta ####
+library(survey)
 #Reconocer diseño muestral con ponderadores
 elsoc_diseno <- svydesign(ids = ~segmento, #muestreo por conglomerado a nivel de manzanas (segmento)
                           strata = ~estrato, #muestreo estratificado a nivel ciudad (estato)
                           weights = ~ponderador02, #ponderador de corte transversal
-                          nest = TRUE,
+                          nest = TRUE, #dentro de cada ciudad dentro de cada manzana
                           data = elsoc_long)
 
 #Crear una tabla para corroborar ponderadores
-datos.tabla <- data.frame(prop.table((svytable(~cambiar_consti + #variable de intrés
+ejemplo.tabla <- data.frame((svytable(~cambiar_consti + #variable de intrés
                                                  ola, #variable de agrupación (puede ser más de una)
                                                elsoc_diseno, #diseño muestral
                                                round = F #redondear cifras
-)))) 
+)))
 
+#Ejemplo: [VARIABLE = conf_presi] y [VAR_Z = ola]
+datos.grafico <- data.frame((svytable(~conf_presi + ola, elsoc_diseno, round = F))) %>%
+  group_by(ola) %>% mutate(porcentaje=Freq/sum(Freq)) %>%
+  na.omit()
 
 ###### PARTE 2: VISUALIZAR LOS DATOS ######
-
-#### Trabajando con una encuesta ####
-#Reconocer diseño muestral con ponderadores
-elsoc_diseno <- svydesign(ids = ~segmento, #muestreo por conglomerado a nivel de manzanas (segmento)
-                          strata = ~estrato, #muestreo estratificado a nivel ciudad (estato)
-                          weights = ~ponderador02, #ponderador de corte transversal
-                          nest = TRUE,
-                          data = elsoc_long)
-
-#Crear una tabla para corroborar ponderadores
-datos.tabla <- data.frame(prop.table((svytable(~cambiar_consti + #variable de intrés
-                                                 ola, #variable de agrupación (puede ser más de una)
-                                               elsoc_diseno, #diseño muestral
-                                               round = F #redondear cifras
-)))) 
-
-
 #### Gráficos de barra simples ####
 
 #Nombrar el gráfico (c.1) y seleccionar datos (datos.grafico)
