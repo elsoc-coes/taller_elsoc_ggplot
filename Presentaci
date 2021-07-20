@@ -1,5 +1,0 @@
-options(htmltools.dir.version = FALSE)
-```{r atri, echo=FALSE, fig.align='center', fig.height=1, out.height="80%", out.width="80%", fig.cap='a'}
-knitr::include_graphics("imagenes/intro.png")
-knitr::include_graphics("imagenes/intro.png")
-names(xaringan:::list_css())
