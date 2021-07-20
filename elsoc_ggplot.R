@@ -17,11 +17,10 @@
 #install.packages("pacman")
 #library(pacman)
 #pacman::p_load(car,dplyr,panelr,stringr,tidyverse,ggplot2,survey,ggrepel,na.tools)
-library(car)
-library(tidyverse) #ggplot, dplyer, stringr
-library(planelr)
-library(ggrepel)
-library(na.tools)
+library(car) #recodificación de variables entre otros
+library(tidyverse) #ggplot y dplyr entre otros
+library(planelr) #manipulación de datos panel
+library(na.tools) #manipulación NA
 
 remove(list = ls()) #limpieza del entorno de trabajo
 options(scipen=999) #evita notación científica
@@ -38,7 +37,7 @@ elsoc_wide <- elsoc_wide %>% dplyr::select(idencuesta, #identificador individual
                                            ponderador01_w01,ponderador01_w02,ponderador01_w03,ponderador01_w04,#ponderador población
                                            ponderador02_w01,ponderador02_w02,ponderador02_w03,ponderador02_w04,#ponderador sexo
                                            m0_sexo_w01,m0_sexo_w02,m0_sexo_w03,m0_sexo_w04, #sexo
-                                           m0_edad_w01,m0_edad_w02,m0_edad_w03,m0_edad_w04, #edad
+                                           m0_edad_w01,m0_edad_w01,m0_edad_w03,m0_edad_w04, #edad
                                            m01_w01,m01_w02,m01_w03,m01_w04, #nivel de educación
                                            d01_01_w01,d01_01_w02,d01_01_w03,d01_01_w04, #estatus social subjetivo
                                            m02_w01,m02_w02,m02_w03,m02_w04, #situación ocupacional
