@@ -129,8 +129,8 @@ elsoc_long$idcoal <- sjlabelled::set_label(elsoc_long$idcoal, label =
 #Recode "c28" grado de acuerdo con cambiar constitución / rename "cambiar_consti".
 elsoc_long$cambiar_consti <- factor(car::recode(elsoc_long$c28, "c(1,2)=1;c(3)=2;c(4,5)=3"))
 elsoc_long$cambiar_consti <- factor(elsoc_long$cambiar_consti, 
-                                    labels = c('En desacuendo o totalmente en desacuerdo', 'Ni de acuerdo ni en 
-                                       desacuerdo', 'De acuerdo o totalmente de acuerdo'))
+                                    labels = c('En desacuendo o totalmente en desacuerdo', 'Ni de acuerdo ni en desacuerdo', 
+                                               'De acuerdo o totalmente de acuerdo'))
 elsoc_long$cambiar_consti <- sjlabelled::set_label(elsoc_long$cambiar_consti, label = 
                                                      c("Grado de Acuerdo con Cambiar Constitución")) #etiquetamos variable
 
@@ -150,7 +150,7 @@ elsoc_long$conf_carb <- sjlabelled::set_label(elsoc_long$conf_carb, label =
                                                 c("Confianza en Carabineros"))  #etiquetamos variable
 
 #Visualizar la bbdd procesada con las variables incorporadas
-knitr::kable(elsoc_long, "pipe")
+view(elsoc_long)
 
 
 ###### g. Guardar base de datos formato R.Data (opcional) ###### 
