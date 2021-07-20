@@ -17,11 +17,10 @@
 #install.packages("pacman")
 #library(pacman)
 #pacman::p_load(car,dplyr,panelr,stringr,tidyverse,ggplot2,survey,ggrepel,na.tools)
-library(car)
-library(tidyverse) #ggplot, dplyer, stringr
-library(planelr)
-library(ggrepel)
-library(na.tools)
+library(car) #recodificación de variables entre otros
+library(tidyverse) #ggplot y dplyr entre otros
+library(planelr) #manipulación de datos panel
+library(na.tools) #manipulación NA
 
 remove(list = ls()) #limpieza del entorno de trabajo
 options(scipen=999) #evita notación científica
