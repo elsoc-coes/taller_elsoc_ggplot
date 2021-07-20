@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Visualización de datos longitudinales en R</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Elisa Salas (esalas1@uc.cl), Isidora Didier (isidora.didier@ug.uchile.cl) y Cristóbal Ortiz (cristobal.ortiz.v@ug.uchile.cl)" />
+    <script src="libs/header-attrs/header-attrs.js"></script>
+    <link href="libs/remark-css/default.css" rel="stylesheet" />
+    <link href="libs/remark-css/rladies.css" rel="stylesheet" />
+    <link href="libs/remark-css/rladies-fonts.css" rel="stylesheet" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+# Visualización de datos longitudinales en R
+### Elisa Salas (<a href="mailto:esalas1@uc.cl" class="email">esalas1@uc.cl</a>), Isidora Didier (<a href="mailto:isidora.didier@ug.uchile.cl" class="email">isidora.didier@ug.uchile.cl</a>) y Cristóbal Ortiz (<a href="mailto:cristobal.ortiz.v@ug.uchile.cl" class="email">cristobal.ortiz.v@ug.uchile.cl</a>)
+### ELSOC, COES
+### 20/7/2021
+
+---
+
+# Contenidos 
+
+En este curso veremos: 
+
+--
+
+**Bloque 1**
+
+1. ¿Por qué visualizamos datos?: Comprender la lógica de la visualización de datos longitudinales.
+
+2. Tratamiento de base de datos: Preparar y depurar una base de datos longitudinales para el análisis.
+
+--
+
+**Bloque 2**
+
+1. ¡A visualizar!: Graficar datos longitudinales en base a muestras complejas.
+
+  * Gráficos de Barra
+  * Gráficos de Puntos/Líneas
+  * Gráficos Alluvial 
+  
+---
+
+class: inverse middle right 
+
+# 1. ¿Qué es la visualización de datos? 
+
+---
+
+&lt;br&gt;
+
+*	“En términos simples, se trata de gráficos y el acto de seleccionar el gráfico correcto para mostrar las características de los datos que se cree que son más relevantes.” (Kirk, 2018, p.17) 
+
+--
+
+* Se debe ser fiel a los datos, por lo que es muy importante un **buen tratamiento de base de datos**.
+
+--
+
+* Por ende, los gráficos tienen que estar a merced de los datos.
+
+--
+
+&lt;div class="figure" style="text-align: center"&gt;
+&lt;img src="imagenes/intro.png" alt="A Definition for Data Visualisation. Fuente: Kirk (2018)" width="70%" height="70%" /&gt;
+&lt;p class="caption"&gt;A Definition for Data Visualisation. Fuente: Kirk (2018)&lt;/p&gt;
+&lt;/div&gt;
+
+---
+# 1.1. Fases de la Visualización de Datos.
+
+&lt;div class="figure" style="text-align: center"&gt;
+&lt;img src="imagenes/fases.png" alt="The Four Stages of the Data Visualisation Design Process. Fuente: Kirk (2018)" width="80%" height="80%" /&gt;
+&lt;p class="caption"&gt;The Four Stages of the Data Visualisation Design Process. Fuente: Kirk (2018)&lt;/p&gt;
+&lt;/div&gt;
+
+1. **Formula tu plan de trabajo**: planifica, define e inicia tu proyecto.
+
+--
+
+2. **Trabajando con la base de datos**: produce, maneja y prepara tus datos.
+
+--
+
+3. **Establece tu pensamiento editorial**: define qué le mostrarás a tu audiencia.
+
+---
+
+# 1.2. Tablas VS Gráficos 
+## ¿Por qué no ambos?
+
+-	Ambas presentan objetivos totalmente distintos. Dependerá del contexto la elección de una de ellas. 
+
+--
+
+-	Cuando hacemos una tabla, hay que preguntarse ¿Cuánto tiempo tardé en encontrar los elementos importantes en ésta?
+
+--
+
+Bondades de los gráficos
+
+--
+
+-	Facilita el **entendimiento** de los datos, lo cual fomenta abrir la ciencia.
+
+--
+
+-	Tiene la capacidad de **resumir** datos, mostrando los elementos más relevantes.
+
+--
+
+-	Es **atractivo** y capta mejor la atención de los y las lectoras.
+
+---
+
+# 1.3. Visualizando datos longitudinales ELSOC
+
+
+- Difícil representación de una gran cantidad de datos en tablas debido a la temporalidad de éstos. 
+
+- Un adelanto de lo que veremos hoy:  
+
+&lt;div class="figure" style="text-align: center"&gt;
+&lt;img src="imagenes/graficos.png" alt="ELSOC (2019). Resultados longitudinales 2016-2019" width="80%" height="80%" /&gt;
+&lt;p class="caption"&gt;ELSOC (2019). Resultados longitudinales 2016-2019&lt;/p&gt;
+&lt;/div&gt;
+
+---
+
+# 1.4. Cómo **NO** visualizar datos.
+
+-	Más allá de lo estético, el error más grande que se puede cometer es la **mala representación de los datos**, lo que probablemente se debe a un mal manejo de la base de datos
+
+--
+
+-	Un ejemplo de esto es el gráfico ¿Crisis de fe en la democracia? (New York Times), que veremos a continuación. 
+
+---
+# ¿Crisis de la fe en la democracia?
+
+&lt;div class="figure" style="text-align: center"&gt;
+&lt;img src="imagenes/nyt.png" alt=" A crisis of faith in democracy? (New York Times). Fuente: Healy (2018)" width="80%" height="80%" /&gt;
+&lt;p class="caption"&gt; A crisis of faith in democracy? (New York Times). Fuente: Healy (2018)&lt;/p&gt;
+&lt;/div&gt;
+
+---
+
+# Quizás no tanto...
+
+&lt;div class="figure" style="text-align: center"&gt;
+&lt;img src="imagenes/nyt_b.png" alt="Perhaps the crisis has been overblown. (Erik Voeten). Fuente: Healy (2018)" width="80%" height="80%" /&gt;
+&lt;p class="caption"&gt;Perhaps the crisis has been overblown. (Erik Voeten). Fuente: Healy (2018)&lt;/p&gt;
+&lt;/div&gt;
+---
+class: inverse middle right
+
+# 2. Uso de **ggplot2** y **tidyverse** 
+
+---
+
+&lt;br&gt;
+
+-	Para la visualización de datos se utiliza el paquete `ggplot2`, el cual pertenece a `tidyverse`. Al igual que otros paquetes de R, presenta distintas funciones que van **desde el manejo de los datos hasta la estética en los gráficos**. 
+
+--
+
+&lt;div class="figure" style="text-align: center"&gt;
+&lt;img src="imagenes/ggplot.png" alt="Fuente: Cheat Sheet ggplot2" width="80%" height="80%" /&gt;
+&lt;p class="caption"&gt;Fuente: Cheat Sheet ggplot2&lt;/p&gt;
+&lt;/div&gt;
+
+---
+
+# 2.1. Componentes **ggplot2**
+
+ 
+* Data [`data`]: Es la base donde se encontrarán los datos para la creación de los gráficos 
+
+* Geometries [`geoms`]: Configura los elementos visuales de los gráficos. Puede modificar datos estadísticos y estética.
+
+* Aesthetics [`aes`]: Se encarga de la estética del gráfico. Se puede cambiar lo colores, tamaños y formas. También, es posible hacer agrupaciones y editar la posición (x, y). 
+
+* Stats [`stat`]: Se utiliza para hacer transformaciones estadísticas que nos permite comprender los datos.
+
+---
+&lt;br&gt;
+
+* Position [`Position`]: Los ajustes de posición determinan cómo organizar [`geoms`].
+
+* Coordinate systems [`coord`]: Modifica los ejes *x* e *y*. Si es que este no es modificado, por defecto se genera el plano cartesiano.
+
+* Facetting [`facet`]: Sive para realizar conjuntos o sub - conjuntos de datos.
+
+* Scale [`scale`]: Transforma valores de la base de datos a valores visuales con su respectiva estética.
+
+* Themes [`theme`]: Controla la visualización de todos los elementos gráficos, a excepción de los datos. 
+
+---
+class: center, middle
+
+# ¡Gracias!
+
+1. Healy, K. (2018). *Data Visualization. A practical introduction.* 
+[https://socviz.co/index.html](https://socviz.co/index.html)
+2. Kirk, A. (2018). *Data Visualisation. A Handbook for Data Driven Design.* 
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>
