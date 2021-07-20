@@ -158,7 +158,7 @@ view(elsoc_long)
 #save(elsoc_long, file "[ruta de carpeta local]/elsoc_long.RData")
 
 
-#### e. Trabajando con una encuesta ####
+#### h. Trabajando con una encuesta ####
 library(survey)
 #Reconocer diseño muestral con ponderadores
 elsoc_diseno <- svydesign(ids = ~segmento, #muestreo por conglomerado a nivel de manzanas (segmento)
