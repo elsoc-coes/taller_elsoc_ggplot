@@ -158,7 +158,7 @@ view(elsoc_long)
 #save(elsoc_long, file "[ruta de carpeta local]/elsoc_long.RData")
 
 
-#### Trabajando con una encuesta ####
+#### e. Trabajando con una encuesta ####
 library(survey)
 #Reconocer diseño muestral con ponderadores
 elsoc_diseno <- svydesign(ids = ~segmento, #muestreo por conglomerado a nivel de manzanas (segmento)
@@ -168,16 +168,14 @@ elsoc_diseno <- svydesign(ids = ~segmento, #muestreo por conglomerado a nivel de
                           data = elsoc_long)
 
 #Crear una tabla para corroborar ponderadores
-ejemplo.tabla <- data.frame((svytable(~cambiar_consti + #variable de intrés
-                                                 ola, #variable de agrupación (puede ser más de una)
-                                               elsoc_diseno, #diseño muestral
-                                               round = F #redondear cifras
-)))
-
 #Ejemplo: [VARIABLE = conf_presi] y [VAR_Z = ola]
-datos.grafico <- data.frame((svytable(~conf_presi + ola, elsoc_diseno, round = F))) %>%
-  group_by(ola) %>% mutate(porcentaje=Freq/sum(Freq)) %>%
-  na.omit()
+datos.ejemplo <- data.frame((svytable(~conf_presi + #variable de intrés
+                                        ola,  #variable de agrupación (puede ser más de una)
+                                      elsoc_diseno, #diseño muestral
+                                      round = F)))
+
+datos.grafico <- datos.ejemplo %>%
+  group_by(ola) %>% mutate(porcentaje=Freq/sum(Freq)) 
 
 ###### PARTE 2: VISUALIZAR LOS DATOS ######
 #### Gráficos de barra simples ####
@@ -185,8 +183,8 @@ datos.grafico <- data.frame((svytable(~conf_presi + ola, elsoc_diseno, round = F
 #Nombrar el gráfico (c.1) y seleccionar datos (datos.grafico)
 c.1 <-datos.grafico %>% 
   #indicar el contenido del gráfico: ejes y relleno (fill) por ola
-  ggplot(aes(y = porcentaje, x = conf_presi, fill = ola, 
-             label = as.character(scales::percent(porcentaje, accuracy = .1)))) +
+  ggplot(aes(y = porcentaje, x = ola, fill = conf_presi, 
+             label = as.character(scales::percent(porcentaje, accuracy = .1)))) + 
   #fijar el fondo y el marco del gráfico uniforme
   theme_bw() + 
   #geom_col para usar variable y=porcentaje. 'dodge2' para formato side-to-side
