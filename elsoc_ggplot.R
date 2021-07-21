@@ -159,6 +159,7 @@ view(elsoc_long)
 
 
 #### h. Trabajando con una encuesta ####
+install.packages("survey")
 library(survey)
 #Reconocer diseño muestral con ponderadores
 elsoc_diseno <- svydesign(ids = ~segmento, #muestreo por conglomerado a nivel de manzanas (segmento)
@@ -181,12 +182,12 @@ datos.grafico <- datos.ejemplo %>%
 #### Gráficos de barra simples ####
 
 #Nombrar el gráfico (c.1) y seleccionar datos (datos.grafico)
-c.1 <-datos.grafico %>% 
+c.1 <- datos.grafico %>% 
   #indicar el contenido del gráfico: ejes y relleno (fill) por ola
-  ggplot(aes(y = porcentaje, x = ola, fill = conf_presi, 
+  ggplot(aes(y = porcentaje, x = conf_presi, fill = ola, 
              label = as.character(scales::percent(porcentaje, accuracy = .1)))) + 
   #fijar el fondo y el marco del gráfico uniforme
-  theme_bw() + 
+  theme_bw()  +
   #geom_col para usar variable y=porcentaje. 'dodge2' para formato side-to-side
   geom_col(position= 'dodge2') +
   #escala del eje y en porcentajes del 0 al 100%
@@ -248,13 +249,13 @@ elsoc_diseno <- svydesign(ids = ~segmento, strata = ~estrato,
                           data = elsoc_long)
 
 #crear tabla para el gráfico
-datos.grafico <- data.frame((svytable(~conf_presi_rec + ola, elsoc_diseno, 
+datos.grafico_2 <- data.frame((svytable(~conf_presi_rec + ola, elsoc_diseno, 
                                       round = F))) %>% group_by(ola) %>% 
   mutate(porcentaje=Freq/sum(Freq))
 
 #(2) crear gráfico apilado (Stack)
 
-c.3 <-datos.grafico %>% 
+c.3 <-datos.grafico_2 %>% 
   ggplot(aes(y = porcentaje, x = ola, fill = conf_presi_rec, 
              label = as.character(scales::percent(porcentaje, accuracy = .1)))) + 
   theme_bw() + 
@@ -275,15 +276,15 @@ c.3
 
 #### Gráfico de Barras con dos categorías: edad y ola ####
 
-datos.grafico <- data.frame((svytable(~conf_presi_rec 
+datos.grafico.3 <- data.frame((svytable(~conf_presi_rec 
                                       + ola + edad, elsoc_diseno, 
-                                      round = F))) %>% group_by(ola, 
-                                                                edad) %>% mutate(porcentaje=Freq/sum(Freq))
+                                      round = F))) %>% 
+  group_by(ola,edad) %>% mutate(porcentaje=Freq/sum(Freq))
 
 
 #Seleccionar una sóla respuesta, se realiza un subset de los datos a graficar
-datos.subset <- droplevels(subset(datos.grafico, 
-                                  datos.grafico$conf_presi_rec== 'Nada o Poco'))
+datos.subset <- droplevels(subset(datos.grafico.3, 
+                                  datos.grafico.3$conf_presi_rec== 'Nada o Poco'))
 
 c.4 <-datos.subset %>% 
   ggplot(aes(y = porcentaje, x = edad, fill = ola, 
@@ -305,7 +306,7 @@ c.4 <-datos.subset %>%
 c.4
 
 
-#### Gráfico de Barras con más de una variable de interés ####
+#### TAREA: Gráfico de Barras con más de una variable de interés ####
 #agregar variables a bbdd original
 
 #partidos politicos
@@ -441,17 +442,21 @@ c.5
 #Paso 1: Crear una base de datos que agrupa la frecuencia de la variables de 
 #interés por otra variable de agrupación (ej. `ola`).
 
-datos.d.1 <- data.frame((svytable(~idcoal + ola + idencuesta, elsoc_diseno, round = F))) %>% dplyr::filter(Freq>0)  %>% group_by(ola) %>% mutate(porcentaje=Freq/sum(Freq)) %>% na.omit()
+datos.d.1 <- data.frame((svytable(~idcoal + ola + idencuesta, 
+                                  elsoc_diseno, round = F))) %>% 
+  dplyr::filter(Freq>0)  %>% group_by(ola) %>% 
+  mutate(porcentaje=Freq/sum(Freq)) %>% na.omit()
 
 #Paso 2: Crear una tabla que agrupa frecuencias en función de las categorías de 
 #respuesta tanto de la variable de interés como de la variable de agrupación (ej. `ola`)
 
-etiquetas.d.1 <- data.frame((svytable(~idcoal + ola, elsoc_diseno, round = F))) %>% group_by(ola) %>% mutate(porcentaje=Freq/sum(Freq)) %>% na.omit() %>% 
+etiquetas.d.1 <- data.frame((svytable(~idcoal + ola, elsoc_diseno, round = F))) %>% 
+  group_by(ola) %>% mutate(porcentaje=Freq/sum(Freq)) %>% na.omit() %>% 
   mutate(idencuesta = 1)
 
 
 d.1 <- ggplot(datos.d.1, aes(x = ola, fill = idcoal, stratum = idcoal,
-                             alluvium = idencuesta, y = porcentaje))+
+                             alluvium = idencuesta, y = porcentaje)) +
   ggalluvial::geom_flow(alpha = .66) + 
   ggalluvial::geom_stratum(linetype = 0) +
   scale_y_continuous(labels = scales::percent) + 
@@ -471,8 +476,8 @@ d.1 <- ggplot(datos.d.1, aes(x = ola, fill = idcoal, stratum = idcoal,
 d.1
 #### Gráficos Alluvial para dos categorías #### 
 #Paso 1.
-datos.d.3 <- data.frame((svytable(~idcoal + 
-                                    ola + idencuesta + socup + 
+datos.d.3 <- data.frame((svytable(~socup + 
+                                    ola + idencuesta + 
                                     sexo, elsoc_diseno, round = F))) %>% 
   dplyr::filter(Freq>0)  %>% group_by(ola,sexo) %>%
   mutate(porcentaje=Freq/sum(Freq)) %>% na.omit()
@@ -482,11 +487,14 @@ subset.d.3 <- droplevels(subset(datos.d.3, datos.d.3$ola == '2017' |
                                   datos.d.3$ola == '2019'))
 
 #Paso 2
-etiquetas.d.3 <- data.frame((svytable(~idcoal + ola + socup + sexo, elsoc_diseno, round = F))) %>% group_by(ola,sexo) %>% mutate(porcentaje=Freq/sum(Freq)) %>% na.omit() %>% 
+etiquetas.d.3 <- data.frame((svytable(~socup + ola + sexo, 
+                                      elsoc_diseno, round = F))) %>% group_by(ola,sexo) %>% 
+  mutate(porcentaje=Freq/sum(Freq)) %>% na.omit() %>% 
   mutate(idencuesta = 1)
 
 #Paso 2.2 crear un subset sólo para los años 2017 y 2019
-etiquetas.d.3 <- droplevels(subset(etiquetas.d.3, etiquetas.d.3$ola == '2017' | etiquetas.d.3$ola == '2019'))
+etiquetas.d.3 <- droplevels(subset(etiquetas.d.3, 
+                                   etiquetas.d.3$ola == '2017' | etiquetas.d.3$ola == '2019'))
 
 
 d.2 <- ggplot(subset.d.3, aes(x = ola, fill = socup, stratum = socup, 
@@ -501,7 +509,7 @@ d.2 <- ggplot(subset.d.3, aes(x = ola, fill = socup, stratum = socup,
   scale_fill_viridis_d(begin = 0, end = .9, direction = -1, option = 'viridis') +
   facet_wrap(.~sexo)+
   geom_text(data = etiquetas.d.3, 
-            aes(label = ifelse(porcentaje > 0.1 , scales::percent(porcentaje, accuracy = .1),"")),
+            aes(label = ifelse(porcentaje > 0.03 , scales::percent(porcentaje, accuracy = .1),"")),
             position = position_stack(vjust = .5),
             show.legend = FALSE,
             size = 2.75,
@@ -511,7 +519,8 @@ d.2 <- ggplot(subset.d.3, aes(x = ola, fill = socup, stratum = socup,
 d.2
 
 #### Gráficos de Lineas simples ####
-datos.e.1 <- data.frame((svytable(~conf_presi + ola, elsoc_diseno, round = F))) %>% group_by(ola) %>% mutate(porcentaje=Freq/sum(Freq))
+datos.e.1 <- data.frame((svytable(~conf_presi + ola, elsoc_diseno, round = F))) %>% 
+  group_by(ola) %>% mutate(porcentaje=Freq/sum(Freq))
 
 
 e.1 <- ggplot(datos.e.1,aes(y = porcentaje, x = ola, color = conf_presi, group = conf_presi,
@@ -523,7 +532,7 @@ e.1 <- ggplot(datos.e.1,aes(y = porcentaje, x = ola, color = conf_presi, group =
                      limits = c(0,1)) +
   ylab(label = NULL) +
   xlab(label = NULL) +
-  scale_color_viridis_d(begin = 0, end = .95, direction = 1, option = 'viridis') +
+  scale_color_viridis_d(begin = 0, end = .85, direction = 1, option = 'viridis') +
   geom_text_repel(posilinetion = position_dodge(width = .9),
                   size= 2.25) + 
   theme(legend.position = 'top',
@@ -578,7 +587,7 @@ e.2 <- ggplot(subset.e.2,aes(y = porcentaje, x = ola, color = variable, group = 
   ylab(label = NULL) +
   xlab(label = NULL) +
   scale_color_viridis_d(begin = .33, end = .66, direction = 1, option = 'viridis') +
-  facet_wrap(.~zona)+
+  facet_wrap(.~zona) +
   geom_text(vjust = -0.8,
             posilinetion = position_dodge(width = .9),
             size= 1.75) +
