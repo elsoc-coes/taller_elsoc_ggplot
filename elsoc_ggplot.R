@@ -85,7 +85,7 @@ elsoc_long$educacion <- car::recode(elsoc_long$m01,"c(1,2,3)=1;c(4,5)=2;c(6,7)=3
 elsoc_long$educacion <- factor(elsoc_long$educacion,labels = c("Basica","Media","Tecnica","Universitaria"))
 elsoc_long$educacion <- sjlabelled::set_label(elsoc_long$educacion, label = c("Nivel Educacional")) #etiquetamos variable
 
-#Recode variable "d01_01" estatus social subjetivo / raneme "estatus".
+#Recode variable "d01_01" estatus social subjetivo / raname "estatus".
 elsoc_long$estatus<- factor(car::recode(elsoc_long$d01_01, "0:4=1;5=2;6:10=3"),
                             labels = c('Bajo','Medio','Alto'))
 elsoc_long$estatus <- sjlabelled::set_label(elsoc_long$estatus, label = c("Estatus Social Subjetivo")) #etiquetamos variable
