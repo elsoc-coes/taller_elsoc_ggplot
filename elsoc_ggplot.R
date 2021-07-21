@@ -5,7 +5,7 @@
 #########################################                                                            #########################################
 #########################################          AUTORÍA:  PRACTICANTES ELSOC 2021                 #########################################
 #########################################     Isidora Didier, Elisa Salas y Cristóbal Ortiz          #########################################
-#########################################                     UPDATE: 16/07/2021                     #########################################
+#########################################                     UPDATE: 20/07/2021                     #########################################
 #########################################                                                            #########################################
 ##############################################################################################################################################
 
@@ -16,10 +16,10 @@
 
 #install.packages("pacman")
 #library(pacman)
-#pacman::p_load(car,dplyr,panelr,stringr,tidyverse,ggplot2,survey,ggrepel,na.tools)
+pacman::p_load(car,dplyr,panelr,stringr,tidyverse,ggplot2,survey,ggrepel,na.tools)
 library(car) #recodificación de variables entre otros
 library(tidyverse) #ggplot y dplyr entre otros
-library(planelr) #manipulación de datos panel
+library(panelr) #manipulación de datos panel
 library(na.tools) #manipulación NA
 
 remove(list = ls()) #limpieza del entorno de trabajo
@@ -29,6 +29,7 @@ options(scipen=999) #evita notación científica
 load(url("https://dataverse.harvard.edu/api/access/datafile/4606527")) #cargar bbdd desde url oficial alojado en dataverse
 
 ###### c. Selección de variables y filtrado de datos ###### 
+sjmisc::frq(elsoc_wide_2016_2019$tipo_atricion)
 sjmisc::frq(elsoc_wide_2016_2019$tipo_caso)
 
 elsoc_wide <- elsoc_wide_2016_2019 %>% dplyr::filter(tipo_atricion==1 & tipo_caso !=2) #filtrar atrición entre 2016-19 y casos c/inconsistencias mayores
@@ -96,6 +97,8 @@ elsoc_long$socup <- factor(car::recode(elsoc_long$m02,"c(1,2,3) = 1; 7 = 2; 6 = 
                                       "Otras categorías"))
 elsoc_long$socup <- na.replace(elsoc_long$socup, "NS/NR") #recode NA en categoría "NS/NR"
 elsoc_long$socup <- sjlabelled::set_label(elsoc_long$socup, label = c("Situación Ocupacional")) #etiquetamos variable
+
+sjmisc::frq(elsoc_long$socup)
 
 #Recode variable "estrato" que refiere al tipo de ciudad / rename "tipo de ciudad"
 elsoc_long$tipo_ciudad <- factor(elsoc_long$estrato, labels = c('Gran Santiago', 'Gran Valparaíso', 'Gran 
