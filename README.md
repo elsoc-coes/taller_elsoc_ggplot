@@ -1,5 +1,5 @@
 # taller_elsoc_ggplot
-Repositorio del Taller de "Visualización de Datos Longitudinales con R" de la Escuela de Invierno COES-MLIV “Técnicas y Metodologías Longitudinales para el Estudio de Fenómenos Sociales”.
+Repositorio del Taller de Visualización de Datos Longitudinales con R de la Escuela de Invierno COES-MLIV “Técnicas y Metodologías Longitudinales para el Estudio de Fenómenos Sociales”.
 
 El siguiente repositorio corresponde al Taller de Visualización de Datos Longitudinales con R realizado el 20 de julio de 2021 por practicantes ELSOC-COES.
 
